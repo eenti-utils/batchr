@@ -140,3 +140,36 @@ To instantiate a `batchr.Batcher` instance, the following functions are needed
     myBatcher.Add(...)  // this is OK to do
   }()
 ```
+
+**Options:**
+
+**type:** `batchr.Opts struct`
+
+By default, the `batchr.Batcher` object: 
+- has a polling interval of 1 second
+- will check three (3) times after being stopped (to ensure ) 
+
+Any of these values may be adjusted by passing in the `batchr.Opts` struct 
+as the final parameter to the `batchr.New(...)` constructor function.
+
+```go
+  myBatcherOptions := Opts{
+		PollingInterval:    2 * time.Minute,  // check every 2 minutes for items potentially "stuck" in the batcher
+		NumChecksAfterStop: 15,  // check 15 times for items left in the batcher, following a call to batchr.Batcher.Stop()
+	}
+
+  /****************************************************************************************************
+  *  assuming the previously defined functions:                                                       *
+  *   func packageAndDeliver(cakes []Cupcake) ...                                                     *
+  *   func checkTheBatchSize(newCake Cupcake, existingCakesInCurrentBatch []Cupcake) bool ...         *
+  *   func isItTimeForANewBatch(lastUpdated *time.Time) bool ...                                      *
+  *****************************************************************************************************/
+  myBatcher, err := batchr.New[Cupcake](
+    packageAndDeliver, checkTheBatchSize, isItTimeForANewBatch,
+    myBatcherOptions)
+```
+
+When using the `batchr.Opts` struct:
+- specify a value for both parameters `PollingInterval` and `NumChecksAfterStop`
+- omitting the `PollingInterval` parameter turns off periodic polling for the `batchr.Batcher` object (at the end of processing, some items will likely get stuck)
+- omitting the `PollingInterval` parameter deactivates the `NumChecksAfterStop` parameter
