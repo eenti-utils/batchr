@@ -306,6 +306,108 @@ func Test_Stress02_RandomDelays(t *testing.T) {
 	assrtEqual(t, expItemCount, itemCount)
 }
 
+func Test_Stress03_ConcurrentAdds(t *testing.T) {
+	var batchCount, itemCount, lastItemValue int
+
+	batchCap := 1000
+	expBatchCount := 1000
+	expItemCount := expBatchCount * batchCap
+
+	batchProcessorFunc := func(items []int) {
+		t.Logf("Received a batch of size %d", len(items))
+		batchCount++
+		receivedItemsCount := len(items)
+		itemCount += receivedItemsCount
+		for _, iNum := range items {
+			lastItemValue=iNum
+		}
+		if itemCount == expItemCount {
+			t.Log("Just processed the last item!")
+		}
+	}
+
+	capacityEvaluatorFunc := func(newItem int, existingItems []int) (r bool) {
+		r = len(existingItems) == batchCap
+		return
+	}
+
+	intervalEvaluatorFunc := func(lastUpdated *time.Time) (r bool) {
+		if lastUpdated == nil {
+			return false
+		}
+		cur := time.Now().UnixMilli()
+		lu := lastUpdated.UnixMilli()
+
+		timeSinceLastProcessed := cur-lu
+		r = timeSinceLastProcessed > 700
+		if r {
+			t.Logf(
+				"Need to force processing because too much time (%d ms) has passed since the last batch was processed",
+				timeSinceLastProcessed)
+		}
+		return 
+	}
+	
+	bOptions := Opts {
+		PollingInterval: time.Second,
+		NumChecksAfterStop: 3,
+	}
+
+	b, err := New(batchProcessorFunc, capacityEvaluatorFunc, intervalEvaluatorFunc, bOptions)
+	assrtNil(t, err)
+	if err != nil {
+		t.Fatalf("%v", err)
+	}
+
+	var attemptedItemCount int
+	parallelDone := false
+	go func ()  {
+		for j := 0; j < expItemCount; j+=2 {
+			if ! b.Add(j*-1) {
+				t.Logf("(p) could not add item # %d to batcher",j)
+			} else {
+				attemptedItemCount++
+			}
+		}
+		parallelDone = true
+	}()
+	for i := 1; i < expItemCount; i+=2 {
+		if ! b.Add(i) {
+			t.Logf("could not add item # %d to batcher",i)
+		} else {
+			attemptedItemCount++
+		}
+	}
+
+	// wait for concurrent processing to complete before stopping
+	for ! parallelDone {
+		time.Sleep(2 * time.Second)	
+	}
+
+	b.Stop()
+	remainingItems := b.Size()
+	t.Log("Stopped batcher")
+	t.Logf("Attempted to add %d items", attemptedItemCount)
+	t.Logf("Items remaining in batcher, after Stop(): %d",remainingItems)
+	t.Logf("last item value to be processed: %d",lastItemValue)
+
+	time.Sleep(1 * time.Second)
+
+	t.Logf("Actual number of batches: %d", batchCount)
+	assrtEqual(t, expBatchCount, batchCount)
+	t.Logf("Actual number of items: %d", itemCount)
+	actualItemCount := itemCount                                             //photo finish
+	assrtEqualAny(t, []any{expItemCount, expItemCount - 1}, actualItemCount) // could be off due to polling interval and timing ...
+
+	if actualItemCount == expItemCount-1 {
+		time.Sleep(2 * time.Second) // delay until the final item is processed
+		assrtTrue(t, b.IsEmpty(), "Batch should be empty, by now!")
+	}
+
+	assrtEqual(t, expItemCount, itemCount)
+}
+
+
 const tFail = "test failed"
 
 func failTest(t *testing.T, msgAndArgs0 ...any) {
