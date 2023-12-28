@@ -41,6 +41,9 @@ To instantiate a `batchr.Batcher` instance, the following functions are needed
   
 
 **Processor Function**
+
+**type:** `batchr.BatchProcessor[V any] func(items []V)`
+
 ```go
   // What the Cupcake Batcher does with the batch
 
@@ -51,6 +54,9 @@ To instantiate a `batchr.Batcher` instance, the following functions are needed
 ```
 
 **Capacity Evaluator Function**
+
+**type:** `batchr.CapacityEvaluator[V any] func(newItem V, existingItems []V) bool`
+
 ```go
   // How the Cupcake Batcher knows to make batches of 10 (and not 11, or some other arbitrary value)
 
@@ -63,6 +69,9 @@ To instantiate a `batchr.Batcher` instance, the following functions are needed
 ```
 
 **Time Interval Evaluator Function**
+
+**type:** `batchr.IntervalEvaluator func(lastUpdated *time.Time) bool`
+
 ```go
   // so that cupcakes don't get left or "stuck" in the batcher ...
   func isItTimeForANewBatch(lastUpdated *time.Time) bool {
@@ -79,6 +88,9 @@ To instantiate a `batchr.Batcher` instance, the following functions are needed
 ```
 
 **Instantiation Example:**
+
+**type:** `batchr.Batcher[V any] interface`
+
 ```go
   /****************************************************************************************************
   *  assuming the previously defined functions:                                                       *
@@ -87,4 +99,16 @@ To instantiate a `batchr.Batcher` instance, the following functions are needed
   *   func isItTimeForANewBatch(lastUpdated *time.Time) bool ...                                      *
   *****************************************************************************************************/
   myBatcher, err := batchr.New[Cupcake](packageAndDeliver, checkTheBatchSize, isItTimeForANewBatch)
+
+  if err != nil {
+    panic(err)
+  }
+
+  // now add items to be processed in batches ...
+  myBatcher.Add(...)
+
+  // concurrent adds are also supported ...
+  go func() {
+    myBatcher.Add(...)  // this is OK to do
+  }()
 ```
