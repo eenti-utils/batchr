@@ -9,7 +9,12 @@ This is accomplished by:
 **Usage Example:**
 ```go
   var myBatcher batchr.Batcher[Cupcake]
-  // ... assuming we've instantiated the myBatcher object to process the user-defined type Cupcake, in batches of 10 
+  /*************************************
+   * This example assumes that  we've  *
+   * instantiated the myBatcher object *
+   * to process the user-defined type  *
+   * Cupcake, in batches of 10         * 
+   *************************************/
 
   var cupcakeArr []Cupcake
   // ... assuming that cupcakeArr now has several zillion Cupcake elements
@@ -22,10 +27,15 @@ This is accomplished by:
     myBatcher.Add(c)
   }
 
-  /**********************************************************************************************
-   * How does myBatcher know to make batches of 10 (and not 11, or some other arbitrary value)? *
-   * What does myBatcher do with the batch, once it has the correct number of cupcakes??        *
-   **********************************************************************************************/
+  /**************************************
+   * 1. How does myBatcher know to make *
+   * batches of 10 (and not 11, or some *
+   * other arbitrary value)?            *
+   *                                    *
+   * 2. What does myBatcher do with the *
+   * batch, once it has the correct     *
+   * number of cupcakes??               *
+   **************************************/
 ```
 
 Instantiating a `batchr.Batcher` instance
