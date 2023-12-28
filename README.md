@@ -20,7 +20,7 @@ For the duration of the long-running process, items are fed to the `batchr.Batch
 - concurrently
 - all, or some combination of the above
 
-The `batchr.Batcher` object collects the items into groups (i.e. _batches_) and processes each group.
+The `batchr.Batcher` object collects the items into groups (i.e. _batches_,) and processes each group.
 
 The examples following use a user-defined data type called `Cupcake` as the item type.
 
