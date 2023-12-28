@@ -3,8 +3,8 @@
 The batchr package is a library written in Go that facilitates the processing of data (any type) in batches.
 
 This is accomplished by:
-1. instantiating a `Batcher` object of the user-specified data type
-1. feeding elements of the user-specified data type to the `Batcher` object
+1. instantiating a `batchr.Batcher` object of the user-specified data type
+1. feeding elements of the user-specified data type to the `batchr.Batcher` object
 
 **Usage Example:**
 ```go
