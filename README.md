@@ -11,14 +11,14 @@ This is accomplished by:
 A `batchr.Batcher` object is ideal for use in long-running processes where large numbers of items of a given type must be processed in groups, at a time.
 
 - several zillion items to be processed in groups of umteen items, each
-- nine thousand file objects to be processed in groups where the total number of bytes for all files in the group is less than 500MB
+- thousands file objects to be processed in groups where the total number of bytes for all files in the group is less than 500MB
 
 For the duration of the long-running process, items are fed to the `batchr.Batcher` object via its Add(...) method: 
 - at random
 - at once (i.e. as an array or slice)
 - in sequence
 - concurrently
-- all, or some combination of the above
+- all (or some combination) of the above
 
 The `batchr.Batcher` object collects the items into groups (i.e. _batches_,) and processes each group.
 
