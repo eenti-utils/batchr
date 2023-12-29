@@ -147,7 +147,7 @@ To instantiate a `batchr.Batcher` instance, the following functions are needed
 
 By default, the `batchr.Batcher` object: 
 - has a polling interval of 1 second
-- will check three (3) times after being stopped (to ensure ) 
+- will check three (3) times, after being stopped (so that items are not left in the batcher) 
 
 Any of these values may be adjusted by passing in the `batchr.Opts` struct 
 as the final parameter to the `batchr.New(...)` constructor function.
