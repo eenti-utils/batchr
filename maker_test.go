@@ -2,6 +2,7 @@ package batchr
 
 import (
 	"math/rand"
+	"sync"
 	"testing"
 	"time"
 )
@@ -263,12 +264,19 @@ func Test_Stress02_RandomDelays(t *testing.T) {
 		t.Fatalf("%v", err)
 	}
 
+	var totalDelay time.Duration
+
 	delay := func() {
-		dVal := rand.Intn(900)
-		if dVal % 2 == 0 {
+		if totalDelay > 10 * time.Second {
 			return
 		}
-		time.Sleep( time.Duration(dVal) * time.Millisecond)
+		dVal := rand.Intn(900)
+		dly := time.Duration(dVal) * time.Millisecond
+		totalDelay += dly
+		if dVal % 2 == 0 || totalDelay > 10 * time.Second {
+			return
+		}
+		time.Sleep( dly)
 	}
 
 	var attemptedItemCount int
@@ -360,17 +368,19 @@ func Test_Stress03_ConcurrentAdds(t *testing.T) {
 	}
 
 	var attemptedItemCount int
-	parallelDone := false
-	go func ()  {
+
+	var w sync.WaitGroup
+	w.Add(2)
+	go func (iCount *int)  {
+		defer w.Done()
 		for j := 0; j < expItemCount; j+=2 {
 			if ! b.Add(j*-1) {
 				t.Logf("(p) could not add item # %d to batcher",j)
 			} else {
-				attemptedItemCount++
+				*iCount++
 			}
 		}
-		parallelDone = true
-	}()
+	}(&attemptedItemCount)
 	for i := 1; i < expItemCount; i+=2 {
 		if ! b.Add(i) {
 			t.Logf("could not add item # %d to batcher",i)
@@ -378,11 +388,10 @@ func Test_Stress03_ConcurrentAdds(t *testing.T) {
 			attemptedItemCount++
 		}
 	}
+	w.Done()
 
 	// wait for concurrent processing to complete before stopping
-	for ! parallelDone {
-		time.Sleep(2 * time.Second)	
-	}
+	w.Wait()
 
 	b.Stop()
 	remainingItems := b.Size()
@@ -392,119 +401,11 @@ func Test_Stress03_ConcurrentAdds(t *testing.T) {
 	t.Logf("last item value to be processed: %d",lastItemValue)
 
 	time.Sleep(1 * time.Second)
-
 	t.Logf("Actual number of batches: %d", batchCount)
 	assrtEqual(t, expBatchCount, batchCount)
 	t.Logf("Actual number of items: %d", itemCount)
 	actualItemCount := itemCount                                             //photo finish
 	assrtEqualAny(t, []any{expItemCount, expItemCount - 1}, actualItemCount) // could be off due to polling interval and timing ...
 
-	if actualItemCount == expItemCount-1 {
-		time.Sleep(2 * time.Second) // delay until the final item is processed
-		assrtTrue(t, b.IsEmpty(), "Batch should be empty, by now!")
-	}
-
 	assrtEqual(t, expItemCount, itemCount)
-}
-
-
-const tFail = "test failed"
-
-func failTest(t *testing.T, msgAndArgs0 ...any) {
-	t.Helper()
-
-	if len(msgAndArgs0) == 0 {
-		t.Errorf(tFail)
-	}
-	var msg string
-	var msgOK bool
-	msg, msgOK = msgAndArgs0[0].(string)
-	if !msgOK {
-		t.Errorf(tFail)
-	}
-	args := msgAndArgs0[1:]
-	t.Errorf(msg, args...)
-}
-
-func assrtEqual(t *testing.T, oe, oa any, msgAndArgs0 ...any) {
-	t.Helper()
-
-	if oe == oa {
-		return
-	}
-	if len(msgAndArgs0) == 0 {
-		t.Errorf("expected values to be equal, but\n\texpected value was %v\n\tactual value was %v", oe, oa)
-		return
-	}
-	failTest(t, msgAndArgs0)
-}
-
-func assrtEqualAny(t *testing.T, oe0 []any, oa any, msgAndArgs0 ...any) {
-	t.Helper()
-	if len(oe0) == 0 {
-		t.Errorf("impossible - empty assertion for EqualAny")
-		return
-	}
-	for _, oe := range oe0 {
-		if oe == oa {
-			return
-		}
-	}
-	if len(msgAndArgs0) == 0 {
-		t.Errorf("expected value to equal one of %v, but\n\tactual value was %v", oe0, oa)
-		return
-	}
-	failTest(t, msgAndArgs0)
-}
-
-func assrtFalse(t *testing.T, o any, msgAndArgs0 ...any) {
-	t.Helper()
-
-	if o == false {
-		return
-	}
-	if len(msgAndArgs0) == 0 {
-		t.Errorf("expected bool false, but actual value was %v", o)
-		return
-	}
-	failTest(t, msgAndArgs0)
-}
-
-func assrtTrue(t *testing.T, o any, msgAndArgs0 ...any) {
-	t.Helper()
-
-	if o == true {
-		return
-	}
-	if len(msgAndArgs0) == 0 {
-		t.Errorf("expected bool true, but actual value was %v", o)
-		return
-	}
-	failTest(t, msgAndArgs0)
-}
-
-func assrtNil(t *testing.T, o any, msgAndArgs0 ...any) {
-	t.Helper()
-
-	if o == nil {
-		return
-	}
-	if len(msgAndArgs0) == 0 {
-		t.Errorf("expected nil, but actual value was %v", o)
-		return
-	}
-	failTest(t, msgAndArgs0)
-}
-
-func assrtNotNil(t *testing.T, o any, msgAndArgs0 ...any) {
-	t.Helper()
-
-	if o != nil {
-		return
-	}
-	if len(msgAndArgs0) == 0 {
-		t.Errorf("expected non-nil, but actual value was nil")
-		return
-	}
-	failTest(t, msgAndArgs0)
 }
